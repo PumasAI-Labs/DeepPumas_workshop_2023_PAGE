@@ -1,8 +1,8 @@
 # Scientific Modeling Augmented by Machine-Learning with DeepPumas
 
-DeepPumas is not an incremental improvement but a game-changer in pharmaceutical drug development analytics. Come experience the innovation!
+DeepPumas is not an incremental improvement but a game-changer in pharmaceutical drug development analytics. 
 
-About this Event
+### About this Event
 
 Scientific Modeling Augmented by Machine-Learning with DeepPumas
 Presented by Pumas-AI, Inc.
@@ -14,7 +14,7 @@ Applicable across the whole chain of drug development, from lead generation, qua
 
 The workshop is split in two, where the first day is dedicated to learning the powerful Pumas software for pharmacometric modeling. During the second day, we learn about machine learning and how it can be seamlessly embedded in pharmacometric models using DeepPumas.
 
-At the end of the workshop, participants will:
+### At the end of the workshop, participants will:
 
 - Gain an overview of the Pumas modelling and simulation ecosystem
 - Gain an overview of the theory behind neural networks and their embedding within dynamical and statistical models.
@@ -22,7 +22,8 @@ At the end of the workshop, participants will:
 - Use neural-embedded pharmacological models to identify predictive factors in patient data.
 - Use embedded neural networks to identify missing terms and unknown relationships in pharmacological models.
 - Gain an overview of what problems can be solved by this novel technology.
-Workflows covered:
+
+### Workflows covered:
 
 - Model population pharmacokinetics in Pumas
 - Model PKPD in Pumas
@@ -34,29 +35,50 @@ Workflows covered:
 - Use DeepPumas to automatically identify tumor size dynamics
 - Use DeepPumas to automatically Identify the effect of tumor size on survival.
 
-June 26, 2023
+### June 26, 2023
+
 08:30-08:45 Introduction to Pumas and DeepPumas
+
 08:45-09:15 Setting up the workspace
+
 09:15-10:00 Population Pharmacokinetic modeling Part 1 - Overview of Pumas and Pumas Workflow
+
 10:00-10:15 Coffee break
+
 10:15-11:15 Population Pharmacokinetic modeling Part 2 - Iterative Model Building
+
 11:15-13:00 Sequential PKPD – Indirect response model
+
 13:00-14:00 Lunch break
+
 14:00-15:00 Survival modeling
+
 15:00-16:15 Data Wrangling
 
 
-June 27, 2023
+### June 27, 2023
+
 08:30-09:20 Machine learning & Neural Networks (Lecture)
+
 09:20-10:00 Fitting, overfitting and regularizing Neural Networks
+
 10:00-10:15 Coffee Break
+
 10:15-10:45 DeepPumas IDR model – Automatic identification of dynamics
+
 10:45-11:30 Why did that work? DeepPumas theory (lecture)
+
 11:30-12:30 DeepPumas IDR model – Identification of prognostic factors
+
 12:30-13:30 Lunch Break
+
 13:30-14:30 DeepPumas Tumor size modeling – identifying dynamics
+
 14:30-15:15 DeepPumas survival modeling – automatic identification of hazard
+
 15:15-15:30 Coffee Break
+
 15:30-16:30 DeepPumas joint tumor size inhibition and overall survival model – automatic identification of tumor size effect on hazard.
+
 16:30-17:00 Concluding remarks and outlining the future.
 
