@@ -8,40 +8,42 @@ Note, we are not providing much context and detail here. We'll pick the individu
 
 """
 
-using DeepPumas
-using StableRNGs
-# using PumasUtilities
-using CairoMakie
-using Serialization
+using Pkg
+Pkg.activate(@__DIR__())
+
+@time using DeepPumas
+@time using PumasPlots.CairoMakie
+@time using CairoMakie
+set_theme!(DeepPumas.plottheme())
 
 ############################################################################################
-## Generate synthetic data from an indirect response model (IDR) with complicated covariates
+## Generate synthetic data from an indirect response model (IDR) 
 ############################################################################################
 
 ## Define the data-generating model
 datamodel = @model begin
     @param begin
-        tvKa ∈ RealDomain(; lower = 0, init = 0.5)
-        tvCL ∈ RealDomain(; lower = 0)
-        tvVc ∈ RealDomain(; lower = 0)
-        tvSmax ∈ RealDomain(; lower = 0, init = 0.9)
-        tvn ∈ RealDomain(; lower = 0, init = 1.5)
-        tvSC50 ∈ RealDomain(; lower = 0, init = 0.2)
-        tvKout ∈ RealDomain(; lower = 0, init = 1.2)
-        Ω ∈ PDiagDomain(; init = fill(0.05, 5))
-        σ ∈ RealDomain(; lower = 0, init = 5e-2)
+        tvKa ∈ RealDomain()
+        tvCL ∈ RealDomain()
+        tvVc ∈ RealDomain()
+        tvSmax ∈ RealDomain()
+        tvn ∈ RealDomain()
+        tvSC50 ∈ RealDomain()
+        tvKout ∈ RealDomain()
+        tvKin ∈ RealDomain()
+        Ω ∈ PDiagDomain(5)
+        σ ∈ RealDomain()
     end
     @random begin
         η ~ MvNormal(Ω)
     end
-    @covariates R_eq c1 c2 c3 c4 c5 c6
     @pre begin
-        Smax = tvSmax * exp(η[1]) + 3 * c1 / (10.0 + c1) # exp(η[3] + exp(c3) / (1 + exp(c3)) + 0.05 * c4)
-        SC50 = tvSC50 * exp(η[2] + 0.5 * (c2 / 20)^0.75)
-        Ka = tvKa * exp(η[3] + 0.3 * c3 * c4)
-        Vc = tvVc * exp(η[4] + 0.3 * c3)
-        Kout = tvKout * exp(η[5] + 0.3 * c5 / (c6 + c5))
-        Kin = R_eq * Kout
+        Smax = tvSmax * exp(η[1]) 
+        SC50 = tvSC50 * exp(η[2])
+        Ka = tvKa * exp(η[3])
+        Vc = tvVc * exp(η[4])
+        Kout = tvKout * exp(η[5])
+        Kin = tvKin
         CL = tvCL
         n = tvn
     end
@@ -49,7 +51,7 @@ datamodel = @model begin
         R = Kin / Kout
     end
     @vars begin
-        cp = max(Central / Vc, 0)
+        cp = max(Central / Vc, 0.)
         EFF = Smax * cp^n / (SC50^n + cp^n)
     end
     @dynamics begin
@@ -58,33 +60,34 @@ datamodel = @model begin
         R' = Kin * (1 + EFF) - Kout * R
     end
     @derived begin
-        yPD ~ @. Normal(R, σ)
+        Outcome ~ @. Normal(R, σ)
     end
 end
 
-## Generate synthetic data.
-pop = synthetic_data(
-    datamodel;
-    covariates = (;
-        R_eq = Gamma(5e2, 1/(5e2)), 
-        c1 = Gamma(10, 1),
-        c2 = Gamma(21, 1),
-        c3 = Normal(),
-        c4 = Normal(),
-        c5 = Gamma(11, 1),
-        c6 = Gamma(11, 1),
-    ),
-    nsubj = 1020,
-    rng = StableRNG(123),
+p_data = (;
+    tvKa = 0.5,
+    tvCL = 1.,
+    tvVc = 1., 
+    tvSmax = 2.9,
+    tvn = 1.5,
+    tvSC50 = 0.05,
+    tvKout = 2.2,
+    tvKin = 0.8,
+    Ω = Diagonal(fill(0.1, 5)),
+    σ = 0.1
 )
 
-## Split the data into different training/test populations
-trainpop_small = pop[1:80]
-trainpop_large = pop[1:1000]
-testpop = pop[length(trainpop_large)+1:end]
+dr = DosageRegimen(1., ii=6, addl=2)
+obstimes = 0:24
+
+trainpop = synthetic_data(datamodel, dr, p_data; nsubj = 10, obstimes)
+testpop = synthetic_data(datamodel, dr, p_data; nsubj = 12, obstimes)
+
+plotgrid(testpop)
 
 ## Visualize the synthetic data and the predictions of the data-generating model.
-pred_datamodel = predict(datamodel, testpop, init_params(datamodel); obstimes = 0:0.1:10);
+## The specified `obstimes` is just to get a denser timecourse so that plots look smooth.
+pred_datamodel = predict(datamodel, testpop, p_data; obstimes = 0:0.1:24);
 plotgrid(pred_datamodel)
 
 
@@ -100,14 +103,15 @@ model = @model begin
         # Define a multi-layer perceptron (a neural network) which maps from 6 inputs (2
         # state variables + 4 individual parameters) to a single output. Apply L2
         # regularization (equivalent to a Normal prior).
-        NN ∈ MLP(6, 6, 5, (1, identity); reg = L2(1.0))
+        NN ∈ MLP(5, 6, 5, (1, identity); reg = L2(1.0))
         tvKa ∈ RealDomain(; lower = 0)
         tvCL ∈ RealDomain(; lower = 0)
         tvVc ∈ RealDomain(; lower = 0)
+        tvR₀  ∈ RealDomain(; lower = 0)
+        ωR₀  ∈ RealDomain(; lower = 0)
         Ω ∈ PDiagDomain(2)
         σ ∈ RealDomain(; lower = 0)
     end
-    @covariates R_eq
     @random begin
         η ~ MvNormal(Ω)
         η_nn ~ MvNormal(1e-2 .* I(3))
@@ -116,11 +120,17 @@ model = @model begin
         Ka = tvKa * exp(η[1])
         Vc = tvVc * exp(η[2])
         CL = tvCL
-        R₀ = R_eq
+        
+        # Letting the initial value of R depend on a random effect enables
+        # its identification from observations. Note how we're using this 
+        # random effect in both R₀ and as an input to the NN.
+        # This is because the same information might be useful for both
+        # determining the initial value and for adjusting the dynamics.
+        R₀ = tvR₀ * exp(10 * ωR₀ * η_nn[1])
 
-        # Fix individual parameters as static inputs to the NN and return an "individual"
+        # Fix random effects as non-dynamic inputs to the NN and return an "individual"
         # neural network:
-        iNN = fix(NN, R₀, η_nn)
+        iNN = fix(NN, η_nn)
     end
     @init begin
         R = R₀
@@ -128,82 +138,54 @@ model = @model begin
     @dynamics begin
         Depot' = -Ka * Depot
         Central' = Ka * Depot - (CL / Vc) * Central
-        R' = iNN(Central, R)[1]
+        R' = iNN(Central/Vc, R)[1]
     end
     @derived begin
-        yPD ~ @. Normal(R, σ)
+        Outcome ~ @. Normal(R, σ)
     end
 end
 
-fpm = fit(
+@time fpm = fit(
     model,
-    trainpop_small,
+    trainpop,
     init_params(model),
     MAP(FOCE());
     # Some extra options to speed up the demo at the expense of a little accuracy:
-    optim_options = (; iterations=75),
+    optim_options = (; iterations=100),
 )
+# Note that we only used 10 patients to train the model (unless you've tinkered with the code - something we encourage!).
 
-
-# In case we don't want to wait - I've got a finished fit stored
-serialize(@__DIR__() * "/assets/05_fpm.jls", fpm)
-# fpm = deserialize(@__DIR__() * "/assets/deep_pumas_fpm.jls")
+pred_traindata = predict(fpm; obstimes = 0:0.1:24);
+plotgrid(pred_traindata)
 
 # The model has succeeded in discovering the dynamical model if the individual predictions
-# match the observations well.
-pred = predict(model, testpop, coef(fpm); obstimes = 0:0.1:10);
-plotgrid(pred)
-
-############################################################################################
-## 'Augment' the model to predict heterogeneity from data
-############################################################################################
-# All patient heterogeneity of our recent model was captured by random effects and can thus
-# not be predicted by the model. Here, we 'augment' that model with ML that's trained to 
-# capture this heterogeneity from data.
-#
-# Data quantity is more important for covariate identification than it is for system
-# identification. Prediction improvements could still be made with only 80 patients, but
-# to correctly identify the covariate effects we need more data.
-
-# Generate a target for the ML fitting from a Normal approximation of the posterior η
-# distribution.
-target = preprocess(model, trainpop_large, coef(fpm), FOCE())
-nn = MLP(numinputs(target), 10, 10, (numoutputs(target), identity); reg = L2())
-ho = hyperopt(nn, target)
-augmented_model = augment(fpm, ho)
-
-pred_augment =
-    predict(augmented_model, testpop, init_params(augmented_model); obstimes = 0:0.1:10);
-plotgrid(
-    pred_datamodel;
-    ipred = false,
-    pred = (; color = (:black, 0.4), label = "Best possible pred"),
-)
-plotgrid!(pred_augment; ipred=false)
+# match the observations well for test data.
+pred = predict(model, testpop, coef(fpm); obstimes = 0:0.1:24);
+plotgrid(pred; ylabel="Outcome (Test data)")
 
 
-############################################################################################
-## Further refinement by fitting everything in concert
-############################################################################################
+
+# If we discovered the actual relationship between drug and response then we should be able to
+# use the model on patients under a dosing regimen that the model was never fitted on.
+dr2 = DosageRegimen(0.5, ii=3, addl=2)
+testpop2 = synthetic_data(datamodel, dr2, p_data; nsubj = 12, obstimes=0:2:24)
+pred2 = predict(model, testpop2, coef(fpm); obstimes = 0:0.01:24);
+plotgrid(pred2)
+
+# We can overlay the data-generating model ipreds of this out-of-sample data
+pred_truth = predict(datamodel, testpop2, p_data; obstimes = 0:0.01:24);
+plotgrid(pred2)
+plotgrid!(pred_truth; pred=false, ipred=(; color=Cycled(3), label="DataModel ipred"))
 
 
-# Running this fully would take hours, but we can show that it works
-fpm_deep = fit(
-  augmented_model,
-  trainpop_large,
-  init_params(augmented_model),
-  MAP(FOCE());
-  optim_options = (; time_limit = 5*60),
-  diffeq_options = (; alg = Rodas5P()),
-  constantcoef = (; NN = init_params(augmented_model).NN)
-)
-# serialize(@__DIR__() * "/assets/deep_pumas_fpm_deep.jls", fpm_deep)
-# fpm_deep = deserialize(@__DIR__() * "/assets/deep_pumas_fpm_deep.jls")
+#=
+Exercises:
 
-pred_deep = predict(augmented_model, testpop, coef(fpm_deep); obstimes = 0:0.1:10);
-plotgrid(
-    pred_datamodel;
-    ipred = false,
-    pred = (; color = (:black, 0.4), label = "Best possible pred"),
-)
-plotgrid!(pred_deep; ipred=false)
+- How many subjects do you need for training? Re-train with different numbers
+  of training subjects and see how the model performs of test data.
+  
+- How noise-sensitive is this? Increase the noisiness (σ) in your training and
+  test data and re-fit. Can you compensate for noise with a larger training
+  population?
+
+=#
