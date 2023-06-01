@@ -82,3 +82,22 @@ The workshop is split in two, where the first day is dedicated to learning the p
 
 16:30-17:00 Concluding remarks and outlining the future.
 
+
+## Getting started
+
+This workshop will be run in a Pumas Enterprise cloud-based environment. To get started, we'll need to go
+
+- Go to https://pumasai.juliahub.com and log in
+- Launch the "Julia IDE" application
+- Once launched and you're in a VSCode editor that'll open up, clone this repository
+  - open up a terminal (Ctrl+shift+p then `Terminal: Focus on terminal view`).
+  - Make sure you're in the `~/data/code` folder
+  - run 
+```
+git clone https://github.com/PumasAI-Labs/DeepPumas_workshop_2023_PAGE.git
+```
+
+This will get you all you need, but for the SciTrek trial run, we'll have some additional set up to do becaue we did not have time to create a DeepPumas application where all of this is hidden.
+
+- Run `initialize.jl`. This will install what you need and do some compilation. It should take ~20 minutes so we'll do this before the lectures.
+
