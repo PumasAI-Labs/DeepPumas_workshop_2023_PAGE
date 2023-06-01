@@ -1,15 +1,10 @@
-using Pkg
-Pkg.activate(@__DIR__())
-
 using Random
 using Distributions
 using DeepPumas
 using CairoMakie
-set_theme!(DeepPumas.plottheme())
 
 ## Generate data
 ## The "observations", Y, are functions of time but there is within-subject correlation
-f(t, c1, c2; σ=0.05) = c1 * t / (t + c2) + rand(Normal(0., σ))
 
 datamodel_me = @model begin
   @param σ ∈ RealDomain(; lower=0., init=0.05)
@@ -39,7 +34,6 @@ model_t = @model begin
   @pre X = NN(t)[1]
   @derived Y ~ Normal.(X, σ)
 end
-
 
 fpm_t = fit(model_t, trainpop_me, init_params(model_t), MAP(NaivePooled()))
 
@@ -96,8 +90,9 @@ the model can perfectly capture this two-dimensional between-subject variability
 But, what if our model had fewer random effects than there are dimensions of subject outcome variability?
 
 Exercise: 
-Modify the model_me to only use a single random effect (change Ω and the number of inputs in the MLP) and see how the resulting fit does.
-
+Modify the model_me to only use a single random effect (change the I(2) in the
+random effects and the number of inputs in the MLP) and see how the resulting
+fit does.
 =#
 
 
@@ -106,16 +101,14 @@ Modify the model_me to only use a single random effect (change Ω and the number
 
 
 #=
-The quality of the fits here depend a on a few different things
-
+The quality of the fits here depend a on a few different things. Among these are:
 
 - The number of training subjects
 - The number of observations per subject
 - The noisiness of the data
 
-Each random effect supplied to the model is a degree of freedom 
-
-You may not need many patients to train on if your data is good - try it!
+You may not need many patients to train on if your data is good - use and
+modify the code just below to try it!
 
 But if the data quality is a bit off, then data quantity might compensate 
   - increase σ and re-run
@@ -212,11 +205,6 @@ plotgrid(pred_train; ylabel = "Y (training data)")
 
 
 #=
-In the synthetic data, c1 governs the asymptotic value of Y, while c2 governs
-the time scale at which we approach that asymptote. These aspects of the data
-are independent, but they may contribute to the model's likelihood in a dependent manner. One could, for example
-
-
-for getting a good fit? And which aspect did your MeNet model find?
-
+The model *should* not be able to make a perfect fit here - but how did it do?
+What aspect of the data did it seem not to capture?
 =#
