@@ -7,6 +7,7 @@ Pkg.precompile()
 
 using DeepPumas
 using CairoMakie
+using StableRNGs
 x = collect(1:3)
 lines(x,x)
 
@@ -52,4 +53,112 @@ function DeepPumas.preprocess(X::Matrix, Y::Matrix; standardize = false)
     identity
   end
   return DeepPumas.FitTarget{:x, :y}(X, Y, xtrsf, identity)
+end
+
+
+
+# Trigger some time-consuming compilation
+let x=1
+  datamodel = @model begin
+      @param begin
+          tvKa ∈ RealDomain()
+          tvCL ∈ RealDomain()
+          tvVc ∈ RealDomain()
+          tvSmax ∈ RealDomain()
+          tvn ∈ RealDomain()
+          tvSC50 ∈ RealDomain()
+          tvKout ∈ RealDomain()
+          tvKin ∈ RealDomain()
+          Ω ∈ PDiagDomain(5)
+          σ ∈ RealDomain()
+      end
+      @random begin
+          η ~ MvNormal(Ω)
+      end
+      @pre begin
+          Smax = tvSmax * exp(η[1]) 
+          SC50 = tvSC50 * exp(η[2])
+          Ka = tvKa * exp(η[3])
+          Vc = tvVc * exp(η[4])
+          Kout = tvKout * exp(η[5])
+          Kin = tvKin
+          CL = tvCL
+          n = tvn
+      end
+      @init begin
+          R = Kin / Kout
+      end
+      @vars begin
+          cp = max(Central / Vc, 0.)
+          EFF = Smax * cp^n / (SC50^n + cp^n)
+      end
+      @dynamics begin
+          Depot' = -Ka * Depot
+          Central' = Ka * Depot - (CL / Vc) * Central
+          R' = Kin * (1 + EFF) - Kout * R
+      end
+      @derived begin
+          Outcome ~ @. Normal(R, σ)
+      end
+  end
+
+  p_data = (;
+      tvKa = 0.5,
+      tvCL = 1.,
+      tvVc = 1., 
+      tvSmax = 2.9,
+      tvn = 1.5,
+      tvSC50 = 0.05,
+      tvKout = 2.2,
+      tvKin = 0.8,
+      Ω = Diagonal(fill(0.1, 5)),
+      σ = 0.1
+  )
+
+  dr = DosageRegimen(1., ii=6, addl=2)
+  obstimes = 0:24
+  trainpop = synthetic_data(datamodel, dr, p_data; nsubj = 10, obstimes, rng=StableRNG(1))
+
+  model = @model begin
+      @param begin
+          NN ∈ MLP(5, 6, 5, (1, identity); reg = L2(1.0))
+          tvKa ∈ RealDomain(; lower = 0)
+          tvCL ∈ RealDomain(; lower = 0)
+          tvVc ∈ RealDomain(; lower = 0)
+          tvR₀  ∈ RealDomain(; lower = 0)
+          ωR₀  ∈ RealDomain(; lower = 0)
+          Ω ∈ PDiagDomain(2)
+          σ ∈ RealDomain(; lower = 0)
+      end
+      @random begin
+          η ~ MvNormal(Ω)
+          η_nn ~ MvNormal(1e-2 .* I(3))
+      end
+      @pre begin
+          Ka = tvKa * exp(η[1])
+          Vc = tvVc * exp(η[2])
+          CL = tvCL
+          R₀ = tvR₀ * exp(10 * ωR₀ * η_nn[1])
+          iNN = fix(NN, η_nn)
+      end
+      @init begin
+          R = R₀
+      end
+      @dynamics begin
+          Depot' = -Ka * Depot
+          Central' = Ka * Depot - (CL / Vc) * Central
+          R' = iNN(Central/Vc, R)[1]
+      end
+      @derived begin
+          Outcome ~ @. Normal(R, σ)
+      end
+  end
+
+  fpm = fit(
+      model,
+      trainpop,
+      init_params(model),
+      MAP(FOCE());
+      optim_options = (; iterations=1),
+  )
 end
