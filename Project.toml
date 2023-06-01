@@ -1,0 +1,12 @@
+[deps]
+CairoMakie = "13f3f980-e62b-5c42-98c6-ff1f3baf88f0"
+DeepPumas = "291c1e0f-52e3-4e13-8e48-890190cbb865"
+Distributions = "31c24e10-a181-5473-b8eb-7969acd0382f"
+Latexify = "23fbe1c1-3f47-55db-b15f-69d7ec21a316"
+Random = "9a3f8284-a2c9-5f02-9a11-845980a1fd5c"
+SimpleChains = "de6bee2f-e2f4-4ec7-b6ed-219cc6f6e9e5"
+StableRNGs = "860ef19b-820b-49d6-a774-d7a799459cd3"
+ThreadsX = "ac1d9e8a-700a-412c-b207-f0111f4b6c0d"
+
+[compat]
+DeepPumas = "0.6"
