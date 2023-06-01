@@ -1,6 +1,3 @@
-using Pkg
-Pkg.activate(@__DIR__())
-
 using DeepPumas
 using CairoMakie
 using StableRNGs
@@ -57,25 +54,11 @@ true_parameters = (; tvImax = 1.1, tvIC50 = 0.8, tvKa = 1.0, σ = 0.1)
 
 # 1.1. Simulate subjects A and B with different dosage regimens
 
-data_a = synthetic_data(data_model, DosageRegimen(1.), true_parameters; nsubj=1, obstimes=0:1:10)
+data_a = synthetic_data(data_model, DosageRegimen(5.), true_parameters; nsubj=1, obstimes=0:1:10)
+data_b = synthetic_data(data_model, DosageRegimen(10.), true_parameters; nsubj=1, obstimes=0:1:10)
 
-sim_a = simobs(
-    data_model,
-    Subject(; events = DosageRegimen(5.0)),
-    true_parameters;
-    obstimes = 0:1:10,
-    rng = StableRNG(1),
-)
-plotgrid([Subject(sim_a)]; data = (; label = "Data (subject A)"))
-
-sim_b = simobs(
-    data_model,
-    Subject(; events = DosageRegimen(10.0)),  # higher dose
-    true_parameters;
-    obstimes = 0:1:10,
-    rng = StableRNG(2),
-)
-plotgrid!([Subject(sim_b)]; data = (; label = "Data (subject B)"), color = :gray)
+plotgrid(data_a; data = (; label = "Data (subject A)"))
+plotgrid!(data_b; data = (; label = "Data (subject B)"), color = :gray)
 
 # 1.2. A dummy neural network for modeling dynamics
 
@@ -89,15 +72,15 @@ time_model = @model begin
 end
 
 # Strip the dose out of the subject since this simple model does not know what to do with a dose.
-pop_a = read_pumas(DataFrame(sim_a); observations = [:Outcome], event_data = false)
-pop_b = read_pumas(DataFrame(sim_b); observations = [:Outcome], event_data = false)
+data_a_no_dose = read_pumas(DataFrame(data_a); observations = [:Outcome], event_data = false)
+data_b_no_dose = read_pumas(DataFrame(data_b); observations = [:Outcome], event_data = false)
 
-fpm_time = fit(time_model, pop_a, init_params(time_model), MAP(NaivePooled()))
+fpm_time = fit(time_model, data_a_no_dose, init_params(time_model), MAP(NaivePooled()))
 
 pred_a = predict(fpm_time; obstimes=0:0.1:10);
 plotgrid!(pred_a; pred = (; label = "Pred (subject A)"), ipred = false)
 
-pred_b = predict(time_model, pop_b, coef(fpm_time); obstimes=0:0.1:10);
+pred_b = predict(time_model, data_b_no_dose, coef(fpm_time); obstimes=0:0.1:10);
 plotgrid!(pred_b, pred = (; label = "Pred (subject B)", color = :red), ipred = false)
 
 # 
@@ -130,14 +113,14 @@ ude_model = @model begin
     end
 end
 
-plotgrid([Subject(sim_a)]; data = (; label = "Data (subject A)"))
-plotgrid!([Subject(sim_b)]; data = (; label = "Data (subject B)"), color = :gray)
+plotgrid(data_a; data = (; label = "Data (subject A)"))
+plotgrid!(data_b; data = (; label = "Data (subject B)"), color = :gray)
 
-fpm_ude = fit(ude_model, [Subject(sim_a)], init_params(ude_model), MAP(NaivePooled()))
+fpm_ude = fit(ude_model, data_a, init_params(ude_model), MAP(NaivePooled()))
 pred_a = predict(fpm_ude; obstimes=0:0.1:10);
 plotgrid!(pred_a; pred = (; label = "Pred (subject A)"), ipred = false)
 
-pred_b = predict(ude_model, [Subject(sim_b)], coef(fpm_ude); obstimes=0:0.1:10);
+pred_b = predict(ude_model, data_b, coef(fpm_ude); obstimes=0:0.1:10);
 plotgrid!(pred_b, pred = (; label = "Pred (subject B)", color = :red), ipred = false)
 
 # 2.2. Combine existing domain knowledge and a neural network
@@ -163,20 +146,23 @@ end
 
 fpm_knowledge = fit(
     ude_model_knowledge,
-    [Subject(sim_a)],
+    data_a,
     init_params(ude_model_knowledge),
     MAP(NaivePooled());
     diffeq_options = (; alg=Rodas5P()),
 )
 
-plotgrid([Subject(sim_a)]; data = (; label = "Data (subject A)"))
-plotgrid!([Subject(sim_b)]; data = (; label = "Data (subject B)"), color = :gray)
+plotgrid(data_b; data = (; label = "Data (subject A)"))
+plotgrid!(data_b; data = (; label = "Data (subject B)"), color = :gray)
 
 pred_a = predict(fpm_knowledge; obstimes=0:0.1:10);
 plotgrid!(pred_a; pred = (; label = "Pred (subject A)"), ipred = false)
 
-pred_b = predict(ude_model_knowledge, [Subject(sim_b)], coef(fpm_knowledge); obstimes=0:0.1:10);
+pred_b = predict(ude_model_knowledge, data_b, coef(fpm_knowledge); obstimes=0:0.1:10);
 plotgrid!(pred_b, pred = (; label = "Pred (subject B)", color = :red), ipred = false)
+
+# How did we do? Did the encoding of further knowledge (conservation of drug
+# between Depot and Central) make the model better?
 
 # 2.3. Extend the analysis to a population of multiple, heterogeneous, subjects
 #
@@ -206,7 +192,6 @@ end
 
 # 2.4. Analyse the effect of very sparse data on the predictions
 
-
 sims_sparse = [
     simobs(
         data_model_heterogeneous,
@@ -228,6 +213,7 @@ fpm_sparse = fit(
 pred = predict(fpm_sparse; obstimes = 0:0.01:10);
 plotgrid(pred)
 
+# plot them all stacked ontop of oneanother
 begin
     fig = Figure()
     ax = Axis(fig[1,1]; xlabel="Time", ylabel="Outcome", title="Stacked predictions")
@@ -237,6 +223,10 @@ begin
     fig
 end
 
+# Does it look like we've found anything reasonable?
+
+
+# 2.5. Finally, what if we have multiple patients with fairly rich timecourses?
 
 population = synthetic_data(data_model_heterogeneous, DosageRegimen(5.0), true_parameters; obstimes=0:1:10, nsubj=25, rng=StableRNG(1))
 plotgrid(population)
