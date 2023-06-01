@@ -8,13 +8,10 @@ Note, we are not providing much context and detail here. We'll pick the individu
 
 """
 
-using Pkg
-Pkg.activate(@__DIR__())
-
-@time using DeepPumas
-@time using PumasPlots.CairoMakie
-@time using CairoMakie
-set_theme!(DeepPumas.plottheme())
+using DeepPumas
+using CairoMakie
+using StableRNGs
+set_theme!(deep_light())
 
 ############################################################################################
 ## Generate synthetic data from an indirect response model (IDR) 
@@ -74,16 +71,15 @@ p_data = (;
     tvKout = 2.2,
     tvKin = 0.8,
     Ω = Diagonal(fill(0.1, 5)),
-    σ = 0.1
+    σ = 0.1                         ## <-- tune the observational noise of the data here
 )
 
 dr = DosageRegimen(1., ii=6, addl=2)
 obstimes = 0:24
 
-trainpop = synthetic_data(datamodel, dr, p_data; nsubj = 10, obstimes)
-testpop = synthetic_data(datamodel, dr, p_data; nsubj = 12, obstimes)
+trainpop = synthetic_data(datamodel, dr, p_data; nsubj = 10, obstimes, rng=StableRNG(1))
+testpop = synthetic_data(datamodel, dr, p_data; nsubj = 12, obstimes, rng=StableRNG(2))
 
-plotgrid(testpop)
 
 ## Visualize the synthetic data and the predictions of the data-generating model.
 ## The specified `obstimes` is just to get a denser timecourse so that plots look smooth.
@@ -145,7 +141,7 @@ model = @model begin
     end
 end
 
-@time fpm = fit(
+fpm = fit(
     model,
     trainpop,
     init_params(model),
