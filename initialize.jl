@@ -6,11 +6,14 @@ Pkg.instantiate()
 Pkg.precompile()
 
 using DeepPumas
+using CairoMakie
+x = collect(1:3)
+lines(x,x)
 
 ## Add some convenience methods that did not make it to the DeepPumas release we'll be using.
 
-(f::DeepPumas.HoldoutValidationResult)(x) = f.ml.post(f.ml.ml(f.ml.pre(x)))
-(f::DeepPumas.HyperoptResult)(x) = f.ml.post(f.ml.ml(f.ml.pre(x)))
+(f::DeepPumas.HoldoutValidationResult)(x) = collect(f.ml.post(f.ml.ml(f.ml.pre(x))))
+(f::DeepPumas.HyperoptResult)(x) = collect(f.ml.post(f.ml.ml(f.ml.pre(x))))
 Pumas.coef(f::DeepPumas.ModelParam) = collect(f.param)
 Pumas.coef(f::DeepPumas.HoldoutValidationResult) = coef(f.ml.ml)
 Pumas.coef(ho::DeepPumas.HyperoptResult) = coef(ho.ml.ml)
