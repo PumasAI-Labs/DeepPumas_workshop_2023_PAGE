@@ -99,7 +99,7 @@ model = @model begin
         # Define a multi-layer perceptron (a neural network) which maps from 6 inputs (2
         # state variables + 4 individual parameters) to a single output. Apply L2
         # regularization (equivalent to a Normal prior).
-        NN ∈ MLP(5, 6, 5, (1, identity); reg = L2(1.0))
+        NN ∈ MLPDomain(5, 6, 5, (1, identity); reg = L2(1.0))
         tvKa ∈ RealDomain(; lower = 0)
         tvCL ∈ RealDomain(; lower = 0)
         tvVc ∈ RealDomain(; lower = 0)
