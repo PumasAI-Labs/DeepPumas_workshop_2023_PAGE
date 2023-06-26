@@ -28,7 +28,7 @@ plotgrid(trainpop_me[1:12])
 ## Assume Y function of time but otherwise independently distributed.
 model_t = @model begin
   @param begin
-    NN ∈ MLP(1, 4, 4, (1, identity); reg=L2())
+    NN ∈ MLPDomain(1, 4, 4, (1, identity); reg=L2())
     σ ∈ RealDomain(; lower=0.)
   end
   @pre X = NN(t)[1]
@@ -37,17 +37,13 @@ end
 
 fpm_t = fit(model_t, trainpop_me, init_params(model_t), MAP(NaivePooled()))
 
+pred = predict(fpm_t; obstimes=0:0.01:1)[1]
 
-begin
-  df = DataFrame(trainpop_me)
-  fig, ax, plt = scatter(df.time, df.Y; label="Data", axis=(;xlabel="Time", ylabel="Y"))
-
-  pred = predict(fpm_t; obstimes=0:0.01:1)[1]
-  lines!(ax, collect(pred.time), pred.pred.Y; color=Cycled(2), label="NN prediction")
-
-  axislegend(ax; position=:lt)
-  fig
-end
+df = DataFrame(trainpop_me);
+fig, ax, plt = scatter(df.time, df.Y; label="Data", axis=(;xlabel="Time", ylabel="Y"));
+lines!(ax, collect(pred.time), pred.pred.Y; color=Cycled(2), label="NN prediction")
+axislegend(ax; position=:lt)
+fig
 ## Looks like we've successfully captured how the outcome Y depends on time, right?
 
 ## But, wait. We've ignored that the observations are correlated not only with
@@ -58,12 +54,12 @@ plotgrid(predict(fpm_t; obstimes=0:0.01:1)[1:12]; ylabel = "Y (Training data)")
 ## Mixed-effects neural network
 model_me = @model begin
   @param begin
-    NN ∈ MLP(3, 6, 6, (1, identity); reg=L2())
+    NN ∈ MLPDomain(3, 6, 6, (1, identity); reg=L2(; input=false))
     σ ∈ RealDomain(; lower=0.)
   end
-  @random η ~ MvNormal(1e-2 .* I(2))
+  @random η ~ MvNormal(2, 1e-2)
   @pre X = NN(t, η)[1]
-  @derived Y ~ Normal.(X, σ)
+  @derived Y ~ @. Normal(X, σ)
 end
 
 fpm_me = fit(
@@ -175,20 +171,15 @@ to be able to see in what way the fit fails
 
 model_me2 = @model begin
   @param begin
-    NN ∈ MLP(2, 6, 6, (1, identity); reg=L2()) # We now only have 2 inputs as opposed to 3 in model_me
+    NN ∈ MLPDomain(2, 6, 6, (1, identity); reg=L2(; input=false)) # We now only have 2 inputs as opposed to 3 in model_me
     σ ∈ RealDomain(; lower=0.)
   end
-  @random η ~ MvNormal(1e-2 .* I(1))
+  @random η ~ MvNormal(1, 1e-2)
   @pre X = NN(t, η)[1]
   @derived Y ~ Normal.(X, σ)
 end
 
-great_data = synthetic_data(
-  datamodel_me,
-  (; σ=0.01);        # Tune the additive noise
-  obstimes=0:0.05:1, # Modify the observation times
-  nsubj=50,          # Change the number of patients
-)
+great_data = synthetic_data(datamodel_me, (; σ=0.01); obstimes=0:0.05:1, nsubj=50)
 
 plotgrid(great_data)
 

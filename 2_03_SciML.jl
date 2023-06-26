@@ -64,7 +64,7 @@ plotgrid!(data_b; data = (; label = "Data (subject B)"), color = :gray)
 
 time_model = @model begin
     @param begin
-        mlp ∈ MLP(1, 6, 6, (1, identity); reg=L2(0.5))
+        mlp ∈ MLPDomain(1, 6, 6, (1, identity); reg=L2(0.5))
         σ ∈ RealDomain(; lower = 0.0)
     end
     @pre nn_output = mlp(t)[1]
@@ -96,7 +96,7 @@ plotgrid!(pred_b, pred = (; label = "Pred (subject B)", color = :red), ipred = f
 
 ude_model = @model begin
     @param begin
-        mlp ∈ MLP(2, 6, 6, (1, identity); reg = L2(0.5))    # neural network with 2 inputs and 1 output
+        mlp ∈ MLPDomain(2, 6, 6, (1, identity); reg = L2(0.5))    # neural network with 2 inputs and 1 output
         tvKa ∈ RealDomain(; lower = 0.0)                    # typical value of absorption rate constant
         σ ∈ RealDomain(; lower = 0.0)                       # residual error
     end
@@ -127,9 +127,9 @@ plotgrid!(pred_b, pred = (; label = "Pred (subject B)", color = :red), ipred = f
 
 ude_model_knowledge = @model begin
     @param begin
-        mlp ∈ MLP(1, 6, 6, (1, identity); reg = L2(0.5))    # neural network with 2 inputs and 1 output
-        tvKa ∈ RealDomain(; lower = 0.0)                    # typical value of absorption rate constant
-        σ ∈ RealDomain(; lower = 0.0)                       # residual error
+        mlp ∈ MLPDomain(1, 6, 6, (1, identity); reg = L2(0.5))    # neural network with 1 inputs and 1 output
+        tvKa ∈ RealDomain(; lower = 0.0)                          # typical value of absorption rate constant
+        σ ∈ RealDomain(; lower = 0.0)                             # residual error
     end
     @pre begin
         mlp_ = only ∘ mlp
@@ -149,17 +149,23 @@ fpm_knowledge = fit(
     data_a,
     init_params(ude_model_knowledge),
     MAP(NaivePooled());
-    diffeq_options = (; alg=Rodas5P()),
 )
 
-plotgrid(data_b; data = (; label = "Data (subject A)"))
-plotgrid!(data_b; data = (; label = "Data (subject B)"), color = :gray)
-
 pred_a = predict(fpm_knowledge; obstimes=0:0.1:10);
-plotgrid!(pred_a; pred = (; label = "Pred (subject A)"), ipred = false)
+plotgrid(
+    pred_a; 
+    ipred = false,
+    data = (; label = "Data (subject a)", color = :gray),
+    pred = (; label = "Pred (subject a)"),
+)
 
 pred_b = predict(ude_model_knowledge, data_b, coef(fpm_knowledge); obstimes=0:0.1:10);
-plotgrid!(pred_b, pred = (; label = "Pred (subject B)", color = :red), ipred = false)
+plotgrid!(
+    pred_b; 
+    ipred = false,
+    data = (; label = "Data (subject b)", color = :black),
+    pred = (; label = "Pred (subject b)", color=:red),
+)
 
 # How did we do? Did the encoding of further knowledge (conservation of drug
 # between Depot and Central) make the model better?
@@ -214,14 +220,12 @@ pred = predict(fpm_sparse; obstimes = 0:0.01:10);
 plotgrid(pred)
 
 # plot them all stacked ontop of oneanother
-begin
-    fig = Figure()
-    ax = Axis(fig[1,1]; xlabel="Time", ylabel="Outcome", title="Stacked predictions")
-    for i in eachindex(pred)
-        plotgrid!([ax], pred[i:i]; data=(; color=Cycled(i)))
-    end
-    fig
+fig = Figure();
+ax = Axis(fig[1,1]; xlabel="Time", ylabel="Outcome", title="Stacked predictions")
+for i in eachindex(pred)
+    plotgrid!([ax], pred[i:i]; data=(; color=Cycled(i)))
 end
+fig
 
 # Does it look like we've found anything reasonable?
 
@@ -240,12 +244,3 @@ fpm_knowledge_2 = fit(
 
 pred = predict(fpm_knowledge_2; obstimes=0:0.1:10);
 plotgrid(pred)
-
-begin
-    fig = Figure()
-    ax = Axis(fig[1,1]; xlabel="Time", ylabel="Outcome", title="Stacked predictions")
-    for i in eachindex(pred)
-        plotgrid!([ax], pred[i:i]; data=(; color=Cycled(i)))
-    end
-    fig
-end
