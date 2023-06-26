@@ -145,7 +145,7 @@ fig
 #      (Hint: Train again the NN for few and for many iterations.)
 
 underfit_nn =
-    fit(nn, target; optim_alg = DeepPumas.BFGS(), optim_options = (; iterations = 5))
+    fit(nn, target; optim_alg = DeepPumas.BFGS(), optim_options = (; iterations = 2))
 ŷ_underfit = underfit_nn(x)
 
 overfit_nn =
@@ -301,7 +301,8 @@ fig
 # 4.3. Programatic hyperparameter tuning
 
 nn_ho = hyperopt(reg_nn, target_train)
-ŷ_ho = nn_ho(x_valid);
+nn_ho.best_hyperparameters
+ŷ_ho = nn_ho(x_valid)
 
 fig = scatter(vec(x_valid), vec(y_valid); label = "validation data");
 scatter!(vec(x_valid), vec(ŷ_ho), label = "prediction (hyperparam opt.)");
