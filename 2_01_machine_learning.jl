@@ -68,12 +68,13 @@ end
 
 # 1.2. Model `true_function` with a linear regression
 
-target = preprocess(x, y)                        # DeepPumas `target`
+target = preprocess(x, y)                       # DeepPumas `target`
 linreg = MLP(1, (1, identity); bias = true)     # DeepPumas multilayer perceptron 
+# y = a * x + b
 
 
 fitted_linreg = fit(linreg, target; optim_alg = DeepPumas.BFGS())
-coef(fitted_linreg)  # `true_function` is y = x (that is, a = 1 b = 0)
+coef(fitted_linreg)  # `true_function` is y = x + noise (that is, a = 1 b = 0)
 
 ŷ = fitted_linreg(x)
 
