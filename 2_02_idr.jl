@@ -11,6 +11,7 @@ Note, we are not providing much context and detail here. We'll pick the individu
 using DeepPumas
 using CairoMakie
 using StableRNGs
+using PumasPlots
 set_theme!(deep_light())
 
 ############################################################################################
@@ -153,6 +154,9 @@ fpm = fit(
 
 pred_traindata = predict(fpm; obstimes = 0:0.1:24);
 plotgrid(pred_traindata)
+
+ins = inspect(fpm)
+goodness_of_fit(ins)
 
 # The model has succeeded in discovering the dynamical model if the individual predictions
 # match the observations well for test data.
