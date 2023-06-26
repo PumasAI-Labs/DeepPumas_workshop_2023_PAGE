@@ -235,7 +235,7 @@ push!(loss_valid_l, sum((fitted_nn(x_valid) .- y_valid) .^ 2))
 
 iteration_blocks = 100
 for _ = 2:iteration_blocks
-    fitted_nn = fit(
+    global fitted_nn = fit(
         nn,
         target_train,
         coef(fitted_nn);
@@ -274,7 +274,7 @@ push!(reg_loss_valid_l, sum((fitted_reg_nn(x_valid) .- y_valid) .^ 2))
 
 iteration_blocks = 100
 for _ = 2:iteration_blocks
-    fitted_reg_nn = fit(
+    global fitted_reg_nn = fit(
         reg_nn,
         target_train,
         coef(fitted_reg_nn);
