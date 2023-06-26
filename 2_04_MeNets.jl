@@ -174,7 +174,7 @@ model_me2 = @model begin
     NN ∈ MLPDomain(2, 6, 6, (1, identity); reg=L2(; input=false)) # We now only have 2 inputs as opposed to 3 in model_me
     σ ∈ RealDomain(; lower=0.)
   end
-  @random η ~ MvNormal(0.1 .* I(2))
+  @random η ~ MvNormal(0.1 .* I(1))
   @pre X = NN(t, η)[1]
   @derived Y ~ Normal.(X, σ)
 end
