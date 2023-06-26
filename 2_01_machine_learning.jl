@@ -68,8 +68,8 @@ end
 
 # 1.2. Model `true_function` with a linear regression
 
-target = preprocess(x, y)                       # DeepPumas `target`
-linreg = MLP(1, (1, identity); bias = true)     # DeepPumas multilayer perceptron 
+target = preprocess(x, y)  # DeepPumas `target`
+linreg = MLPDomain(1, (1, identity); bias = true)  # DeepPumas multilayer perceptron
 # y = a * x + b
 
 
@@ -127,7 +127,7 @@ end
 
 # 2.3. Use a neural network (NN) to model `true_function`
 
-nn = MLP(1, (8, tanh), (1, identity); bias = true)
+nn = MLPDomain(1, (8, tanh), (1, identity); bias = true)
 fitted_nn =
     fit(nn, target; optim_alg = DeepPumas.BFGS(), optim_options = (; iterations = 50))
 coef(fitted_nn) # try to make sense of the parameters in the NN
@@ -197,7 +197,7 @@ end
 
 # 3.3. The impact of the NN size
 
-nn = MLP(1, (32, tanh), (32, tanh), (1, identity); bias = true)
+nn = MLPDomain(1, (32, tanh), (32, tanh), (1, identity); bias = true)
 fitted_nn = fit(
     nn, 
     target; 
@@ -287,7 +287,7 @@ end
 
 # 4.2. Regularization to prevent overfitting
 
-reg_nn = MLP(1, (32, tanh), (32, tanh), (1, identity); bias = true, reg = L2(0.1))
+reg_nn = MLPDomain(1, (32, tanh), (32, tanh), (1, identity); bias = true, reg = L2(0.1))
 
 begin
     reg_loss_train_l, reg_loss_valid_l = [], []
