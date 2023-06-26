@@ -54,8 +54,8 @@ true_parameters = (; tvImax = 1.1, tvIC50 = 0.8, tvKa = 1.0, σ = 0.1)
 
 # 1.1. Simulate subjects A and B with different dosage regimens
 
-data_a = synthetic_data(data_model, DosageRegimen(5.), true_parameters; nsubj=1, obstimes=0:1:10)
-data_b = synthetic_data(data_model, DosageRegimen(10.), true_parameters; nsubj=1, obstimes=0:1:10)
+data_a = synthetic_data(data_model, DosageRegimen(5.), true_parameters; nsubj=1, obstimes=0:1:10, rng=StableRNG(1))
+data_b = synthetic_data(data_model, DosageRegimen(10.), true_parameters; nsubj=1, obstimes=0:1:10, rng=StableRNG(2))
 
 plotgrid(data_a; data = (; label = "Data (subject A)"))
 plotgrid!(data_b; data = (; label = "Data (subject B)"), color = :gray)
