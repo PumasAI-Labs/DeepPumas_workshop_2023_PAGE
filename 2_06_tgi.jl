@@ -93,9 +93,14 @@ function pred_loglike(model, subject, param)
   zr = zero_randeffs(model, [subject], param)[1]
   return -conditional_nll(model, subject, param, zr)
 end
-function pred_loglike(fpm)
-  return sum(s -> pred_loglike(fpm.model, s, coef(fpm)), fpm.data)
+function pred_loglike(fpm, data = fpm.data)
+  return sum(s -> pred_loglike(fpm.model, s, coef(fpm)), data)
 end
 
+# training
 get_pred_accuracy(ts_fpm_foce)
 get_pred_accuracy(ts_aug_fpm)
+
+# validation
+get_pred_accuracy(ts_fpm_foce, ts_vpop)
+get_pred_accuracy(ts_aug_fpm, ts_vpop)
