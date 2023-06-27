@@ -53,7 +53,7 @@ ts_fpm_foce = fit(
 ts_pr_foce = predict(ts_fpm_foce)
 plotgrid(ts_pr_foce[1:nsubj]; figure=(; resolution=(2000,1200)), linky = false, linkx = false)
 
-ts_sims_foce = [simobs(ts_fpm_foce) for _ 1:100]
+ts_sims_foce = [simobs(ts_fpm_foce) for _ in 1:100]
 ts_vpc_res_foce = vpc(ts_sims_foce)
 vpc_plot(ts_vpc_res_foce, figure = (; resolution = (2500, 1500)), observations = false)
 
