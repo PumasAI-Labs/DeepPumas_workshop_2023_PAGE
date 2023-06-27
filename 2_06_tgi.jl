@@ -98,9 +98,9 @@ function pred_loglike(fpm, data = fpm.data)
 end
 
 # training
-get_pred_accuracy(ts_fpm_foce)
-get_pred_accuracy(ts_aug_fpm)
+pred_loglike(ts_fpm_foce)
+pred_loglike(ts_aug_fpm)
 
 # validation
-get_pred_accuracy(ts_fpm_foce, ts_vpop)
-get_pred_accuracy(ts_aug_fpm, ts_vpop)
+pred_loglike(ts_fpm_foce, ts_vpop)
+pred_loglike(ts_aug_fpm, ts_vpop)
