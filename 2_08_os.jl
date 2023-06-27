@@ -1,5 +1,4 @@
 using DeepPumas, Pumas, CSV, DataFrames, StableRNGs, Random, CairoMakie, PumasPlots, DataFramesMeta
-const ssoftplus = DeepPumas.SimpleChains.softplus
 
 filepath = "data/tgi_os_data.csv"
 df = DataFrame(CSV.File(filepath))
@@ -7,7 +6,7 @@ df = DataFrame(CSV.File(filepath))
 os_pop = read_pumas(
     df,
     observations = [:Death],
-    covariates = [:WT, :AGE, :SEX, :ECOG, :ALBB, :c1, :c2, :c3, :c4, :c5, :c6],
+    covariates = [:WT, :AGE, :SEX, :ECOG, :ALBB],
     event_data = false,
 )
 
@@ -18,7 +17,7 @@ os_vpop = os_pop[os_cutoff+1:end]
 os_model1 = @model begin
   @param begin
     NN_λ ∈ MLPDomain(
-      1, 15, 15, (1, ssoftplus);
+      1, 15, 15, (1, softplus);
       reg = L2(0.01; input = true, output = true, bias = true),
     )
     base_λ ∈ RealDomain(; lower=1e-8, init=1e-3)
@@ -41,7 +40,7 @@ end
 os_model2 = @model begin
   @param begin
     NN_λ ∈ MLPDomain(
-      6, 15, 15, (1, ssoftplus);
+      6, 15, 15, (1, softplus);
       reg = L2(0.01; input = false, output = false, bias = false),
     )
     base_λ ∈ RealDomain(; lower=1e-8, init=1e-3)
@@ -75,38 +74,6 @@ os_model2 = @model begin
   end
 end
 
-os_model3 = @model begin
-  @param begin
-    NN_λ ∈ MLPDomain(
-      7, 15, 15, (1, ssoftplus);
-      reg = L2(0.01; input = false, output = false, bias = false),
-    )
-    base_λ ∈ RealDomain(; lower=1e-8, init=1e-3)
-  end
-  @covariates begin
-    c1
-    c2
-    c3
-    c4
-    c5
-    c6
-  end
-  @pre begin
-    λf = first ∘ NN_λ
-    _base_λ = base_λ
-    covs = (c1, c2, c3, c4, c5, c6)
-  end
-  @dynamics begin
-    it' = 1.0
-    Λ' = λf(it / 2000, covs) + _base_λ
-  end
-  @derived begin
-    λf1 := λf[1]
-    λ := @. λf1(t / 2000, covs) + _base_λ
-    Death ~ @. TimeToEvent(λ, Λ)
-  end
-end
-
 nsubj = min(length(os_tpop), 150)
 _os_tpop = os_tpop[1:nsubj]
 
@@ -128,21 +95,10 @@ fpm2 = fit(
   diffeq_options = (; alg = Rodas5P()),
 )
 
-fpm3 = fit(
-  os_model3,
-  _os_tpop,
-  sample_params(os_model3),
-  MAP(NaivePooled()),
-  optim_options = (; iterations=200, show_every=1),
-  diffeq_options = (; alg = Rodas5P()),
-)
-
 # Training log likelihood
 loglikelihood(os_model1, _os_tpop, coef(fpm1), NaivePooled())
 loglikelihood(os_model2, _os_tpop, coef(fpm2), NaivePooled())
-loglikelihood(os_model3, _os_tpop, coef(fpm3), NaivePooled())
 
 # Test log likelihood
 loglikelihood(os_model1, os_vpop, coef(fpm1), NaivePooled())
 loglikelihood(os_model2, os_vpop, coef(fpm2), NaivePooled())
-loglikelihood(os_model3, os_vpop, coef(fpm3), NaivePooled())
