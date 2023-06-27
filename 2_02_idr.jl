@@ -11,6 +11,7 @@ Note, we are not providing much context and detail here. We'll pick the individu
 using DeepPumas
 using CairoMakie
 using StableRNGs
+using PumasPlots
 set_theme!(deep_light())
 
 ############################################################################################
@@ -99,7 +100,7 @@ model = @model begin
         # Define a multi-layer perceptron (a neural network) which maps from 6 inputs (2
         # state variables + 4 individual parameters) to a single output. Apply L2
         # regularization (equivalent to a Normal prior).
-        NN ∈ MLP(5, 6, 5, (1, identity); reg = L2(1.0))
+        NN ∈ MLPDomain(5, 6, 5, (1, identity); reg = L2(1.0))
         tvKa ∈ RealDomain(; lower = 0)
         tvCL ∈ RealDomain(; lower = 0)
         tvVc ∈ RealDomain(; lower = 0)
@@ -153,6 +154,9 @@ fpm = fit(
 
 pred_traindata = predict(fpm; obstimes = 0:0.1:24);
 plotgrid(pred_traindata)
+
+ins = inspect(fpm)
+goodness_of_fit(ins)
 
 # The model has succeeded in discovering the dynamical model if the individual predictions
 # match the observations well for test data.
